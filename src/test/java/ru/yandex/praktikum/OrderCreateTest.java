@@ -1,21 +1,22 @@
 package ru.yandex.praktikum;
 
 import io.qameta.allure.Step;
-import io.qameta.allure.junit4.DisplayName;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import ru.yandex.praktikum.steps.OrderSteps;
+import ru.yandex.praktikum.steps.Order;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.apache.http.HttpStatus.SC_CREATED;
 
 @RunWith(Parameterized.class)
-public class OrderCreateTestParameterized {
-    private OrderSteps orderSteps = new OrderSteps();
-    String[] color;
+public class OrderCreateTest {
+    private final OrderSteps orderSteps = new OrderSteps();
+    private final String[] color;
 
     @Parameterized.Parameters
-    public static Object[] color() {
+    public static Object[][] color() {
         return new Object[][]{
                 {new String[]{"BLACK"}},
                 {new String[]{"GREY"}},
@@ -24,18 +25,19 @@ public class OrderCreateTestParameterized {
         };
     }
 
-    public OrderCreateTestParameterized(String[] color) {
+    public OrderCreateTest(String[] color) {
         this.color = color;
     }
 
     @Test
-    @DisplayName("Создание заказа")
     @Step("Создание заказа")
     public void createOrderTest() {
+        Order order = new Order(color);
+
         orderSteps
-                .createOrder(color)
+                .createOrder(order)
                 .then()
-                .statusCode(201)
+                .statusCode(SC_CREATED)
                 .body("track", notNullValue());
     }
 }

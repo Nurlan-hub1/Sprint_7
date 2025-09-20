@@ -1,21 +1,32 @@
 package ru.yandex.praktikum.steps;
 
+import io.qameta.allure.Step;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import org.apache.http.entity.ContentType;
+import ru.yandex.praktikum.steps.config.ApiConfig;
+import ru.yandex.praktikum.steps.Order;
 
 import static io.restassured.RestAssured.given;
 
 public class OrderSteps {
-    public final String BASE_URI = "https://qa-scooter.praktikum-services.ru";
-    public final String POST_CREATE = "/api/v1/orders";
+    private final String CREATE = "/api/v1/orders";
+    private final String LIST = "/api/v1/orders";
 
-    public Response createOrder(String[] color) {
-        Order order = new Order(color);
+    @Step("Создать заказ")
+    public Response createOrder(Order order) {
         return given()
-                .contentType(String.valueOf(ContentType.APPLICATION_JSON))
-                .baseUri(BASE_URI)
+                .baseUri(ApiConfig.BASE_URI)
+                .contentType(ContentType.JSON)
                 .body(order)
                 .when()
-                .post(POST_CREATE);
+                .post(CREATE);
+    }
+
+    @Step("Получить список заказов")
+    public Response getOrdersList() {
+        return given()
+                .baseUri(ApiConfig.BASE_URI)
+                .when()
+                .get(LIST);
     }
 }

@@ -1,109 +1,131 @@
 package ru.yandex.praktikum;
 
 import io.qameta.allure.Step;
-import io.qameta.allure.junit4.DisplayName;
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.yandex.praktikum.steps.CourierSteps;
+import ru.yandex.praktikum.steps.models.Courier;
+import io.restassured.RestAssured;
+import io.restassured.parsing.Parser;
 
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphabetic;
+import static org.apache.http.HttpStatus.*;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 public class CourierTest {
-    String loginCourier;
-    String passwordCourier;
-    String firstNameCourier;
 
-    private CourierSteps courier = new CourierSteps();
+    private String loginCourier;
+    private String passwordCourier;
+    private String firstNameCourier;
+    private final CourierSteps courier = new CourierSteps();
+    private Integer courierId;
 
-    @Test
-    @DisplayName("Создание курьера с заполнением всех полей")
-    @Step("Создание курьера")
-    public void createCourierTrue() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-        firstNameCourier = randomAlphabetic(8);
-
-        courier
-                .createCourier(loginCourier, passwordCourier, firstNameCourier)
-                .then()
-                .statusCode(201)
-                .body("ok", is(true));
+    @BeforeClass
+    public static void setUpRestAssured() {
+        // Позволяет работать с JSON даже если сервер не вернул Content-Type
+        RestAssured.defaultParser = Parser.JSON;
     }
 
     @Test
-    @DisplayName("Создание курьера только с заполнением обязательных полей")
-    @Step("Создание курьера")
+    @Step("Создание курьера с login, password, firstName")
+    public void createCourierTrue() {
+        initCourierData();
+        Courier newCourier = new Courier(loginCourier, passwordCourier, firstNameCourier);
+
+        courierId = courier.createCourier(newCourier)
+                .then()
+                .statusCode(SC_CREATED)
+                .body("ok", is(true))
+                .extract()
+                .path("id");
+    }
+
+    @Test
+    @Step("Создание курьера без firstName")
     public void createCourierTrueWithoutFirstName() {
         loginCourier = randomAlphabetic(12);
         passwordCourier = randomAlphabetic(10);
 
-        courier
-                .createCourier(loginCourier, passwordCourier, "")
+        Courier newCourier = new Courier(loginCourier, passwordCourier, "");
+
+        courierId = courier.createCourier(newCourier)
                 .then()
-                .statusCode(201)
-                .body("ok", is(true));
+                .statusCode(SC_CREATED)
+                .body("ok", is(true))
+                .extract()
+                .path("id");
     }
 
     @Test
-    @DisplayName("Невозможность создания курьера без логина")
-    @Step("Попытка создания курьера")
+    @Step("Попытка создания курьера без login")
     public void createCourierFalseWithoutLogin() {
         passwordCourier = randomAlphabetic(10);
         firstNameCourier = randomAlphabetic(8);
 
-        courier
-                .createCourier("", passwordCourier, firstNameCourier)
+        Courier newCourier = new Courier("", passwordCourier, firstNameCourier);
+
+        courier.createCourier(newCourier)
                 .then()
-                .statusCode(400)
-                .body("message", is("Недостаточно данных для создания учетной записи"));
+                .statusCode(SC_BAD_REQUEST)
+                .body("message", containsString("Недостаточно данных для создания учетной записи"));
     }
 
     @Test
-    @DisplayName("Невозможность создания курьера без пароля")
-    @Step("Попытка создания курьера")
+    @Step("Попытка создания курьера без password")
     public void createCourierFalseWithoutPassword() {
         loginCourier = randomAlphabetic(12);
         firstNameCourier = randomAlphabetic(8);
 
-        courier
-                .createCourier(loginCourier, "", firstNameCourier)
+        Courier newCourier = new Courier(loginCourier, "", firstNameCourier);
+
+        courier.createCourier(newCourier)
                 .then()
-                .statusCode(400)
-                .body("message", is("Недостаточно данных для создания учетной записи"));
+                .statusCode(SC_BAD_REQUEST)
+                .body("message", containsString("Недостаточно данных для создания учетной записи"));
     }
 
     @Test
-    @DisplayName("Невозможность создания двух курьеров с одинаковым логином")
-    @Step("Попытка создания курьера")
+    @Step("Попытка создания дубликата курьера")
     public void createDoubleCourierFalse() {
-        loginCourier = randomAlphabetic(12);
-        passwordCourier = randomAlphabetic(10);
-        firstNameCourier = randomAlphabetic(8);
+        initCourierData();
+        Courier newCourier = new Courier(loginCourier, passwordCourier, firstNameCourier);
 
-        // Создадим курьера первый раз
-        courier
-                .createCourier(loginCourier, passwordCourier, firstNameCourier)
+        // Создаем первый раз
+        courierId = courier.createCourier(newCourier)
                 .then()
-                .statusCode(201)
-                .body("ok", is(true));
+                .statusCode(SC_CREATED)
+                .body("ok", is(true))
+                .extract()
+                .path("id");
 
-        // Попробуем создать дубликат
-        courier
-                .createCourier(loginCourier, passwordCourier, firstNameCourier)
+        // Попытка создать дубликат
+        courier.createCourier(newCourier)
                 .then()
-                .statusCode(409)
-                .body("message", is("Этот логин уже используется"));
+                .statusCode(SC_CONFLICT)
+                .body("message", containsString("Этот логин уже используется"));
     }
 
     @After
     public void dataCleaning() {
-        Integer idCourier = courier.loginCourier(loginCourier, passwordCourier)
-                .extract()
-                .body()
-                .path("id");
-        if (idCourier != null) {
-            courier.deleteCourier(idCourier.toString());
+        if (loginCourier == null || loginCourier.isEmpty() ||
+                passwordCourier == null || passwordCourier.isEmpty() ||
+                courierId == null) {
+            return;
         }
+
+        try {
+            courier.deleteCourier(courierId);
+        } catch (Exception e) {
+            System.out.println("Курьер не был создан или уже удален: " + e.getMessage());
+        }
+    }
+
+    // Вспомогательный метод для инициализации данных курьера
+    private void initCourierData() {
+        loginCourier = randomAlphabetic(12);
+        passwordCourier = randomAlphabetic(10);
+        firstNameCourier = randomAlphabetic(8);
     }
 }

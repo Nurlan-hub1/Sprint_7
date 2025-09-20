@@ -1,50 +1,45 @@
 package ru.yandex.praktikum.steps;
 
+import io.qameta.allure.Step;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
+import ru.yandex.praktikum.steps.config.ApiConfig;
+import ru.yandex.praktikum.steps.models.Courier;
+import ru.yandex.praktikum.steps.models.CourierCredentials;
 
 import static io.restassured.RestAssured.given;
 
 public class CourierSteps {
-    public final String BASE_URI = "https://qa-scooter.praktikum-services.ru";
-    public final String POST_CREATE = "/api/v1/courier";
-    public final String POST_LOGIN = "/api/v1/courier/login";
-    public final String DELETE_DELETE = "/api/v1/courier/:id";
+    private final String CREATE = "/api/v1/courier";
+    private final String LOGIN = "/api/v1/courier/login";
+    private final String DELETE = "/api/v1/courier/{id}";
 
-    public Response createCourier(String login, String password, String firstName) {
+    @Step("Создать курьера")
+    public Response createCourier(Courier courier) {
         return given()
+                .baseUri(ApiConfig.BASE_URI)
                 .contentType(ContentType.JSON)
-                .baseUri(BASE_URI)
-                .body("{\n" +
-                        "    \"login\": \"" + login + "\",\n" +
-                        "    \"password\": \"" + password + "\",\n" +
-                        "    \"firstName\": \"" + firstName + "\"\n" +
-                        "}")
+                .body(courier)
                 .when()
-                .post(POST_CREATE);
+                .post(CREATE);
     }
 
-    public ValidatableResponse loginCourier(String login, String password) {
+    @Step("Логин курьера")
+    public Response loginCourier(CourierCredentials credentials) {
         return given()
+                .baseUri(ApiConfig.BASE_URI)
                 .contentType(ContentType.JSON)
-                .baseUri(BASE_URI)
-                .body("{\n" +
-                        "    \"login\": \"" + login + "\",\n" +
-                        "    \"password\": \"" + password + "\"\n" +
-                        "}")
+                .body(credentials)
                 .when()
-                .post(POST_LOGIN)
-                .then();
+                .post(LOGIN);
     }
 
-    public ValidatableResponse deleteCourier(String id) {
+    @Step("Удалить курьера по id")
+    public Response deleteCourier(int courierId) {
         return given()
-                .contentType(ContentType.JSON)
-                .baseUri(BASE_URI)
-                .pathParam("id", id)
+                .baseUri(ApiConfig.BASE_URI)
+                .pathParam("id", courierId)
                 .when()
-                .delete(DELETE_DELETE + "{id}")
-                .then();
+                .delete(DELETE);
     }
 }
