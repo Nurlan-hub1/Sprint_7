@@ -10,9 +10,6 @@ import ru.yandex.praktikum.steps.models.CourierCredentials;
 import static io.restassured.RestAssured.given;
 
 public class CourierSteps {
-    private final String CREATE = "/api/v1/courier";
-    private final String LOGIN = "/api/v1/courier/login";
-    private final String DELETE = "/api/v1/courier/{id}";
 
     @Step("Создать курьера")
     public Response createCourier(Courier courier) {
@@ -21,25 +18,24 @@ public class CourierSteps {
                 .contentType(ContentType.JSON)
                 .body(courier)
                 .when()
-                .post(CREATE);
+                .post("/api/v1/courier");
     }
 
-    @Step("Логин курьера")
+    @Step("Авторизация курьера")
     public Response loginCourier(CourierCredentials credentials) {
         return given()
                 .baseUri(ApiConfig.BASE_URI)
                 .contentType(ContentType.JSON)
                 .body(credentials)
                 .when()
-                .post(LOGIN);
+                .post("/api/v1/courier/login");
     }
 
     @Step("Удалить курьера по id")
     public Response deleteCourier(int courierId) {
         return given()
                 .baseUri(ApiConfig.BASE_URI)
-                .pathParam("id", courierId)
                 .when()
-                .delete(DELETE);
+                .delete("/api/v1/courier/" + courierId);
     }
 }
